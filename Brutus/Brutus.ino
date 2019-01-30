@@ -34,12 +34,10 @@ DS18B20  ds18b20(D2, true); //Sets Pin D2 for Water Temp Sensor and this is the 
 char     szInfo[64];
 double   celsius;
 double   fahrenheit;
-double lat;
-double lon;
+
 uint32_t msLastMetric;
 uint32_t msLastSample;
 
-// gps
 void callback(char* topic, byte* payload, unsigned int length);
 
 // Track last time coordinates were published
@@ -67,13 +65,13 @@ void setup() {
   oled.clearDisplay();
 
   t.begin();
-  t.gpsOn();
+
   // connect to the server
-  client.connect("mqtt_bloody_hell", "ppsmart", "ppmqtt");
+  client.connect("mqtt_BRUTUS", "ppsmart", "ppmqtt");
   // publish/subscribe
   if (client.isConnected()) {
-      client.publish("homeassistant/temp_room1","mqtt_bloody_hell Connected.");
-      client.subscribe("homeassistant/temp_room1");
+      client.publish("homeassistant/brutus/ds18b20","mqtt_BRUTUS Connected.");
+
     }
   Serial.begin(9600);
 
@@ -96,7 +94,6 @@ void loop() {
     Serial.println("Publishing now.");
     publishData();
   }
-  getGPS();
   oled.display();
 }
 
@@ -126,42 +123,13 @@ void getTemp(){
     Serial.println("Invalid reading");
   }
   Serial.println("celsius : "+ String(celsius) + " °C");
-  client.publish("homeassistant/temp_room1","celsius : "+ String(celsius) + " °C");
+  client.publish("homeassistant/brutus/ds18b20",String(celsius));
   Serial.println("fahrenheit : "+ String(fahrenheit) + " °F");
-  client.publish("homeassistant/temp_room1","fahrenheit : "+ String(fahrenheit) + " °F");
+  client.publish("homeassistant/brutus/ds18b20", String(fahrenheit));
 
   delay(5000);
   msLastSample = millis();
 }
-
-void getGPS(){
-    // Reconnect if connection to Signal was lost
-    if(!signal.isConnected()){
-    signal.connect();
-    }
-
-    t.updateGPS();
-
-    // Delay the loop
-    if (millis()-lastPublish > delayMillis) {
-    lastPublish = millis();
-
-    if (t.gpsFix()) {
-        if (signal.isConnected()) {
-            // Publish coordinates
-            signal.publishCoordinates(t.readLatLon());
-            }
-        }
-        Serial.println(t.readLatLon());
-        client.publish("homeassistant/temp_room2","GPS(Lat,Lon) : "+ t.readLatLon());
-    }
-
-    // Maintain the connection to Signal if connected
-    if (signal.isConnected()){
-        signal.loop();
-    }
-}
-
 void displayOled(){
   if(isnan(celsius) || isnan(fahrenheit)) {
     oled.clearDisplay();
@@ -180,9 +148,6 @@ void displayOled(){
   oled.setCursor(5, 25);
   oled.print(fahrenheit);
   oled.print(" F");
-  oled.setTextSize(1);
-  oled.setCursor(5, 45);
-  oled.print("GPS (lat,lon)");
-  oled.setCursor(5, 55);
-  oled.print(t.readLatLon());
+
+
 }
